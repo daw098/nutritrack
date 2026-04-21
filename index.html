@@ -24,27 +24,27 @@
     * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     input, textarea { -webkit-user-select: text; user-select: text; }
     /* iOS standalone splash */
-    #ios-splash {
+    #app-splash {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: linear-gradient(135deg, #0A0A0F 0%, #111118 50%, #0A0A0F 100%);
       z-index: 9999; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       transition: opacity 0.4s ease;
     }
-    #ios-splash.hide { opacity: 0; pointer-events: none; }
-    #ios-splash .splash-icon { font-size: 4rem; margin-bottom: 16px; }
-    #ios-splash .splash-title {
+    #app-splash.hide { opacity: 0; pointer-events: none; }
+    #app-splash .splash-icon { font-size: 4rem; margin-bottom: 16px; }
+    #app-splash .splash-title {
       font-size: 1.5rem; font-weight: 800; font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #00D4AA, #7C4DFF);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    #ios-splash .splash-dots { display: flex; gap: 6px; margin-top: 24px; }
-    #ios-splash .splash-dot {
+    #app-splash .splash-dots { display: flex; gap: 6px; margin-top: 24px; }
+    #app-splash .splash-dot {
       width: 6px; height: 6px; border-radius: 50%; background: #00D4AA;
       animation: splashPulse 1.2s ease-in-out infinite;
     }
-    #ios-splash .splash-dot:nth-child(2) { animation-delay: 0.2s; }
-    #ios-splash .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+    #app-splash .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+    #app-splash .splash-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes splashPulse {
       0%, 100% { opacity: 0.3; transform: scale(0.8); }
       50% { opacity: 1; transform: scale(1.2); }
@@ -53,14 +53,29 @@
 </head>
 <body>
 
-<!-- iOS Splash Screen (shown instantly while app loads) -->
-<div id="ios-splash">
+<!-- App Splash Screen (shown instantly while app loads) -->
+<div id="app-splash">
   <div class="splash-icon">🥗</div>
   <div class="splash-title">NutriTrack</div>
   <div class="splash-dots">
     <div class="splash-dot"></div>
     <div class="splash-dot"></div>
     <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- Install Prompt Banner (Android / Desktop Chrome) -->
+<div id="install-banner" class="install-banner hidden">
+  <div class="install-banner-content">
+    <div class="install-banner-icon">🥗</div>
+    <div class="install-banner-text">
+      <strong>Install NutriTrack</strong>
+      <span>Add to your home screen for the best experience</span>
+    </div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="install-btn-dismiss" onclick="app.dismissInstallBanner()">Not now</button>
+    <button class="install-btn-install" onclick="app.installApp()">Install</button>
   </div>
 </div>
 
@@ -697,12 +712,12 @@
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
-  // ── iOS Native-App Behavior ──
+  // ── Cross-Platform PWA Behavior ──
   (function() {
     // Hide splash screen once app is ready
     window.addEventListener('load', () => {
       setTimeout(() => {
-        const splash = document.getElementById('ios-splash');
+        const splash = document.getElementById('app-splash');
         if (splash) {
           splash.classList.add('hide');
           setTimeout(() => splash.remove(), 500);
@@ -713,12 +728,9 @@
     // Prevent iOS "rubber band" bounce on edges
     document.body.addEventListener('touchmove', function(e) {
       if (e.target.closest('.page, .modal, .food-list, .weight-history-list')) return;
-      if (!e.target.closest('[class*="scroll"]')) {
-        // Allow scrolling inside scrollable containers
-      }
     }, { passive: true });
 
-    // In standalone mode, prevent links from opening Safari
+    // In standalone mode, prevent links from opening external browser
     if (window.navigator.standalone) {
       document.addEventListener('click', function(e) {
         const link = e.target.closest('a');
@@ -729,10 +741,55 @@
       });
     }
 
-    // Detect standalone mode and add class for CSS
+    // Detect standalone mode and add class for CSS (iOS + Android + Desktop)
     if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
       document.documentElement.classList.add('standalone');
     }
+
+    // ── Android / Desktop Chrome: Install Prompt ──
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      // Don't show if already dismissed recently
+      const dismissed = localStorage.getItem('install-dismissed');
+      if (dismissed && (Date.now() - parseInt(dismissed)) < 7 * 86400000) return;
+
+      // Show custom install banner after 3 seconds
+      setTimeout(() => {
+        const banner = document.getElementById('install-banner');
+        if (banner) banner.classList.remove('hidden');
+      }, 3000);
+    });
+
+    // Expose install functions to app
+    window._pwaInstall = {
+      get prompt() { return deferredPrompt; },
+      clear() { deferredPrompt = null; }
+    };
+
+    // Android: Handle back button to close modals
+    window.addEventListener('popstate', () => {
+      const openModal = document.querySelector('.modal-overlay.active');
+      if (openModal) {
+        openModal.classList.remove('active');
+        history.pushState(null, '');
+      }
+    });
+    // Push initial state so back button works
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      history.pushState(null, '');
+    }
+
+    // Track successful install
+    window.addEventListener('appinstalled', () => {
+      const banner = document.getElementById('install-banner');
+      if (banner) banner.classList.add('hidden');
+      deferredPrompt = null;
+      console.log('NutriTrack installed successfully!');
+    });
   })();
 </script>
 

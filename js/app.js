@@ -936,6 +936,27 @@ class NutriApp {
     if (hour < 17) return '☀️';
     return '🌙';
   }
+
+  // ══════════════════════════════════════════════════
+  // PWA INSTALL (Android / Desktop Chrome)
+  // ══════════════════════════════════════════════════
+  async installApp() {
+    const prompt = window._pwaInstall?.prompt;
+    if (!prompt) return;
+
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    if (result.outcome === 'accepted') {
+      this.showToast('🎉 NutriTrack installed!', 'success');
+    }
+    window._pwaInstall.clear();
+    document.getElementById('install-banner')?.classList.add('hidden');
+  }
+
+  dismissInstallBanner() {
+    document.getElementById('install-banner')?.classList.add('hidden');
+    localStorage.setItem('install-dismissed', Date.now().toString());
+  }
 }
 
 // ── Initialize ──

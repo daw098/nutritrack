@@ -1800,3 +1800,137 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
+
+/* ══════════════════════════════════════════════════
+   INSTALL PROMPT BANNER (Android / Desktop Chrome)
+   ══════════════════════════════════════════════════ */
+.install-banner {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: calc(var(--max-width) - 32px);
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  z-index: 150;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 212, 170, 0.08);
+  animation: slideUpBanner 0.4s var(--ease-spring);
+}
+
+.install-banner.hidden {
+  display: none;
+}
+
+@keyframes slideUpBanner {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.install-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.install-banner-icon {
+  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  background: var(--accent-glow);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.install-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-banner-text strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.install-banner-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.install-banner-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.install-btn-dismiss {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all var(--duration-fast);
+}
+
+.install-btn-dismiss:hover {
+  background: var(--bg-hover);
+}
+
+.install-btn-install {
+  flex: 1;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: var(--text-inverse);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 212, 170, 0.25);
+  transition: all var(--duration-fast);
+}
+
+.install-btn-install:hover {
+  box-shadow: 0 6px 24px rgba(0, 212, 170, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ══════════════════════════════════════════════════
+   ANDROID-SPECIFIC ENHANCEMENTS
+   ══════════════════════════════════════════════════ */
+
+/* Android navigation bar area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .standalone .bottom-nav {
+    padding-bottom: max(var(--safe-bottom), 8px);
+  }
+}
+
+/* Smoother scrolling on Android */
+.page {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Android ripple-like active states */
+@media (hover: none) and (pointer: coarse) {
+  .food-result:active,
+  .meal-item:active,
+  .activity-type-card:active {
+    background: var(--bg-hover);
+    transition: background 50ms;
+  }
+}
