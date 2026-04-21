@@ -1,0 +1,26 @@
+{
+  "name": "NutriTrack — Daily Diet Progress",
+  "short_name": "NutriTrack",
+  "description": "Track your weight, nutrition, and activity with a beautiful, privacy-first diet app.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#00D4AA",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"]
+}

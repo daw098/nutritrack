@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="NutriTrack — Track your weight, nutrition, and activity with a beautiful, privacy-first diet app.">
+  <meta name="theme-color" content="#0A0A0F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NutriTrack">
+  <title>NutriTrack — Daily Diet Progress</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- iOS Splash Screen (inline for instant load) -->
+  <style>
+    html, body { overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+    body { padding-top: env(safe-area-inset-top); }
+    /* Prevent text selection and callout on long press */
+    * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    /* iOS standalone splash */
+    #ios-splash {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #0A0A0F 0%, #111118 50%, #0A0A0F 100%);
+      z-index: 9999; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.4s ease;
+    }
+    #ios-splash.hide { opacity: 0; pointer-events: none; }
+    #ios-splash .splash-icon { font-size: 4rem; margin-bottom: 16px; }
+    #ios-splash .splash-title {
+      font-size: 1.5rem; font-weight: 800; font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #00D4AA, #7C4DFF);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    #ios-splash .splash-dots { display: flex; gap: 6px; margin-top: 24px; }
+    #ios-splash .splash-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #00D4AA;
+      animation: splashPulse 1.2s ease-in-out infinite;
+    }
+    #ios-splash .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+    #ios-splash .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes splashPulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- iOS Splash Screen (shown instantly while app loads) -->
+<div id="ios-splash">
+  <div class="splash-icon">🥗</div>
+  <div class="splash-title">NutriTrack</div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     TOAST CONTAINER
+     ══════════════════════════════════════════════════ -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════
+     ONBOARDING OVERLAY
+     ══════════════════════════════════════════════════ -->
+<div id="onboarding" class="onboarding-overlay hidden">
+  <div class="onboarding-card">
+    <div class="onboarding-logo">🥗</div>
+    <h1 class="onboarding-title">NutriTrack</h1>
+    <p class="onboarding-subtitle">Your personal diet &amp; health companion.<br>Let's set up your profile in 60 seconds.</p>
+
+    <div class="onboarding-progress">
+      <div class="onboarding-dot active"></div>
+      <div class="onboarding-dot"></div>
+      <div class="onboarding-dot"></div>
+    </div>
+
+    <!-- Step 0: Basic Info -->
+    <div class="onboarding-step active" data-step="0">
+      <div class="onboarding-form">
+        <div class="form-group">
+          <label class="form-label" for="ob-name">Your Name</label>
+          <input type="text" id="ob-name" class="form-input" placeholder="Enter your name" value="">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ob-sex">Sex</label>
+            <select id="ob-sex" class="form-select">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ob-dob">Date of Birth</label>
+            <input type="date" id="ob-dob" class="form-input" value="1990-01-01">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="app.nextOnboardingStep()" style="margin-top: 12px">
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1: Measurements -->
+    <div class="onboarding-step" data-step="1">
+      <div class="onboarding-form">
+        <div class="form-group">
+          <label class="form-label" for="ob-unit">Measurement Unit</label>
+          <select id="ob-unit" class="form-select">
+            <option value="metric">Metric (kg, cm)</option>
+            <option value="imperial">Imperial (lbs, in)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ob-height">Height (cm)</label>
+            <input type="number" id="ob-height" class="form-input" placeholder="170" value="170">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ob-weight">Current Weight (kg)</label>
+            <input type="number" id="ob-weight" class="form-input" placeholder="75" step="0.1" value="75">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 12px">
+          <button class="btn btn-secondary" onclick="app.prevOnboardingStep()" style="flex:0 0 auto">← Back</button>
+          <button class="btn btn-primary btn-full" onclick="app.nextOnboardingStep()">Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Goals -->
+    <div class="onboarding-step" data-step="2">
+      <div class="onboarding-form">
+        <label class="form-label">Your Goal</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap">
+          <div class="goal-option activity-type-card" data-goal="lose" style="flex:1; min-width: 90px">
+            <div class="at-icon">📉</div>
+            <div class="at-label">Lose Weight</div>
+          </div>
+          <div class="goal-option activity-type-card selected" data-goal="maintain" style="flex:1; min-width: 90px">
+            <div class="at-icon">⚖️</div>
+            <div class="at-label">Maintain</div>
+          </div>
+          <div class="goal-option activity-type-card" data-goal="gain" style="flex:1; min-width: 90px">
+            <div class="at-icon">📈</div>
+            <div class="at-label">Gain Weight</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ob-target-weight">Target Weight (kg)</label>
+            <input type="number" id="ob-target-weight" class="form-input" placeholder="70" step="0.1" value="70">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ob-activity">Activity Level</label>
+            <select id="ob-activity" class="form-select">
+              <option value="sedentary">Sedentary</option>
+              <option value="light">Lightly Active</option>
+              <option value="moderate" selected>Moderately Active</option>
+              <option value="active">Active</option>
+              <option value="veryActive">Very Active</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 12px">
+          <button class="btn btn-secondary" onclick="app.prevOnboardingStep()" style="flex:0 0 auto">← Back</button>
+          <button class="btn btn-primary btn-full" onclick="app.finishOnboarding()">🚀 Get Started</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MAIN APP
+     ══════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div>
+      <div class="header-title">NutriTrack</div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" id="btn-settings" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════
+       PAGE: DASHBOARD
+       ════════════════════════════════════════════════ -->
+  <div id="page-dashboard" class="page active">
+    <!-- Greeting -->
+    <div class="greeting" id="dash-greeting">
+      <h2>Good morning</h2>
+    </div>
+
+    <!-- Calorie Hero Card -->
+    <div class="card card-accent calorie-hero">
+      <div class="calorie-ring-container">
+        <canvas id="calorie-ring"></canvas>
+        <div class="calorie-center">
+          <div class="calorie-remaining count-up" id="cal-remaining">0</div>
+          <div class="calorie-label">remaining</div>
+        </div>
+      </div>
+      <div class="calorie-subtitle" id="cal-subtitle">0 eaten • 0 goal</div>
+      <div class="macro-row">
+        <div class="macro-pill protein">
+          <span class="macro-dot"></span>
+          <span id="macro-protein">0/0g</span>
+        </div>
+        <div class="macro-pill carbs">
+          <span class="macro-dot"></span>
+          <span id="macro-carbs">0/0g</span>
+        </div>
+        <div class="macro-pill fat">
+          <span class="macro-dot"></span>
+          <span id="macro-fat">0/0g</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weight & Water Row -->
+    <div class="stats-row">
+      <div class="stat-card weight-card" onclick="app.navigateTo('weight')">
+        <div class="stat-icon">⚖️</div>
+        <div>
+          <span class="stat-value" id="dash-weight-value">—</span>
+          <span class="stat-unit" id="dash-weight-unit">kg</span>
+        </div>
+        <div class="stat-change neutral" id="dash-weight-change">No data yet</div>
+      </div>
+      <div class="stat-card water-card">
+        <div class="stat-icon">💧</div>
+        <div>
+          <span class="stat-value" id="dash-water-value">0</span>
+          <span class="stat-unit">L <span id="dash-water-target">/2.5L</span></span>
+        </div>
+        <div class="water-bar-container">
+          <div class="water-bar-bg">
+            <div class="water-bar-fill" id="dash-water-fill" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="water-buttons">
+          <button class="water-btn" onclick="app.quickAddWater(250)">+250ml</button>
+          <button class="water-btn" onclick="app.quickAddWater(500)">+500ml</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Meals -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Today's Meals</span>
+        <button class="card-action" onclick="app.navigateTo('food')">View all</button>
+      </div>
+      <div id="dash-meals" class="meal-section">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Activity</span>
+        <button class="card-action" onclick="app.navigateTo('activity')">+ Add</button>
+      </div>
+      <div id="dash-activity">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       PAGE: FOOD
+       ════════════════════════════════════════════════ -->
+  <div id="page-food" class="page">
+    <h2 class="section-title">Log Food</h2>
+
+    <!-- Meal Type Tabs -->
+    <div class="meal-tabs">
+      <button class="meal-tab active" data-meal="breakfast">🌅 Breakfast</button>
+      <button class="meal-tab" data-meal="lunch">☀️ Lunch</button>
+      <button class="meal-tab" data-meal="dinner">🌙 Dinner</button>
+      <button class="meal-tab" data-meal="snack">🍪 Snack</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="food-search" class="search-input" placeholder="Search foods...">
+    </div>
+
+    <!-- Food Results -->
+    <div id="food-results" class="food-list">
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Logged Meals -->
+    <div id="logged-meals" class="logged-entries card" style="margin-top: 16px">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       PAGE: WEIGHT
+       ════════════════════════════════════════════════ -->
+  <div id="page-weight" class="page">
+    <h2 class="section-title">Weight Tracker</h2>
+
+    <!-- Weight Input Card -->
+    <div class="card card-glass weight-input-card">
+      <div style="font-size: 1.8rem">⚖️</div>
+      <div class="weight-display" id="weight-display">75.0</div>
+      <div class="weight-unit-label">kg</div>
+
+      <div class="weight-slider-container">
+        <input type="range" id="weight-slider" class="weight-slider" min="40" max="150" step="0.1" value="75">
+      </div>
+
+      <div class="weight-quick-btns">
+        <button class="weight-quick-btn" onclick="app.adjustWeight(-0.5)">-0.5</button>
+        <button class="weight-quick-btn" onclick="app.adjustWeight(-0.1)">-0.1</button>
+        <button class="weight-quick-btn" onclick="app.adjustWeight(0.1)">+0.1</button>
+        <button class="weight-quick-btn" onclick="app.adjustWeight(0.5)">+0.5</button>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="app.saveWeight()" style="margin-top: 12px">
+        Save Weight
+      </button>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Trend</span>
+      </div>
+      <div class="chart-period-tabs">
+        <button class="chart-period-tab" data-period="week">1W</button>
+        <button class="chart-period-tab active" data-period="month">1M</button>
+        <button class="chart-period-tab" data-period="3month">3M</button>
+        <button class="chart-period-tab" data-period="year">1Y</button>
+        <button class="chart-period-tab" data-period="all">All</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="weight-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="weight-stats">
+      <div class="weight-stat">
+        <div class="ws-label">Current</div>
+        <div class="ws-value" id="ws-current">—</div>
+      </div>
+      <div class="weight-stat">
+        <div class="ws-label">Change</div>
+        <div class="ws-value" id="ws-change">—</div>
+      </div>
+      <div class="weight-stat">
+        <div class="ws-label">Goal</div>
+        <div class="ws-value" id="ws-goal">—</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" style="margin-top: 14px">
+      <div class="card-header">
+        <span class="card-title">History</span>
+      </div>
+      <div id="weight-history" class="weight-history-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       PAGE: ACTIVITY
+       ════════════════════════════════════════════════ -->
+  <div id="page-activity" class="page">
+    <h2 class="section-title">Log Activity</h2>
+
+    <!-- Activity Type Grid -->
+    <div class="activity-type-grid">
+      <div class="activity-type-card" data-type="cardio">
+        <div class="at-icon">🏃</div>
+        <div class="at-label">Cardio</div>
+      </div>
+      <div class="activity-type-card" data-type="strength">
+        <div class="at-icon">🏋️</div>
+        <div class="at-label">Strength</div>
+      </div>
+      <div class="activity-type-card" data-type="flexibility">
+        <div class="at-icon">🧘</div>
+        <div class="at-label">Yoga</div>
+      </div>
+      <div class="activity-type-card" data-type="sports">
+        <div class="at-icon">⚽</div>
+        <div class="at-label">Sports</div>
+      </div>
+      <div class="activity-type-card" data-type="cycling">
+        <div class="at-icon">🚴</div>
+        <div class="at-label">Cycling</div>
+      </div>
+      <div class="activity-type-card" data-type="walking">
+        <div class="at-icon">🚶</div>
+        <div class="at-label">Walking</div>
+      </div>
+      <div class="activity-type-card" data-type="swimming">
+        <div class="at-icon">🏊</div>
+        <div class="at-label">Swimming</div>
+      </div>
+      <div class="activity-type-card" data-type="hiking">
+        <div class="at-icon">🥾</div>
+        <div class="at-label">Hiking</div>
+      </div>
+      <div class="activity-type-card" data-type="other">
+        <div class="at-icon">💪</div>
+        <div class="at-label">Other</div>
+      </div>
+    </div>
+
+    <!-- Activity Form -->
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label" for="act-name">Activity Name</label>
+        <input type="text" id="act-name" class="form-input" placeholder="e.g., Morning run">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="act-duration">Duration (min)</label>
+          <input type="number" id="act-duration" class="form-input" placeholder="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="act-calories">Calories Burned</label>
+          <input type="number" id="act-calories" class="form-input" placeholder="Auto estimate">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="app.saveActivity()" style="margin-top: 8px">
+        Log Activity
+      </button>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card" style="margin-top: 14px">
+      <div id="activity-log-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       PAGE: PROGRESS
+       ════════════════════════════════════════════════ -->
+  <div id="page-progress" class="page">
+    <h2 class="section-title">Your Progress</h2>
+
+    <!-- Streak -->
+    <div class="card streak-card">
+      <div class="streak-fire">🔥</div>
+      <div class="streak-number" id="prog-days">0</div>
+      <div class="streak-label">Day Logging Streak</div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="progress-stat-grid">
+      <div class="progress-stat">
+        <div class="ps-icon">📉</div>
+        <div class="ps-value" id="prog-total-change">—</div>
+        <div class="ps-label">Total Weight Change</div>
+      </div>
+      <div class="progress-stat">
+        <div class="ps-icon">🍽</div>
+        <div class="ps-value" id="prog-entries">0</div>
+        <div class="ps-label">Meals Logged</div>
+      </div>
+      <div class="progress-stat">
+        <div class="ps-icon">🏃</div>
+        <div class="ps-value" id="prog-workouts">0</div>
+        <div class="ps-label">Workouts</div>
+      </div>
+      <div class="progress-stat">
+        <div class="ps-icon">📊</div>
+        <div class="ps-value" id="prog-avg-cal">—</div>
+        <div class="ps-label">Avg Daily Cal</div>
+      </div>
+    </div>
+
+    <!-- Calorie Bar Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Calories — Last 7 Days</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="calorie-bar-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Macro Donut -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Today's Macro Split</span>
+      </div>
+      <div class="chart-container" style="height: 180px">
+        <canvas id="macro-donut"></canvas>
+      </div>
+      <div class="macro-row" style="margin-top: 8px">
+        <div class="macro-pill protein"><span class="macro-dot"></span> Protein</div>
+        <div class="macro-pill carbs"><span class="macro-dot"></span> Carbs</div>
+        <div class="macro-pill fat"><span class="macro-dot"></span> Fat</div>
+      </div>
+    </div>
+
+    <!-- Weight Progress Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Weight Trend</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="progress-weight-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       BOTTOM NAVIGATION
+       ════════════════════════════════════════════════ -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-page="dashboard">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-page="food">
+      <span class="nav-icon">🍽</span>
+      <span class="nav-label">Food</span>
+    </button>
+    <button class="nav-item nav-plus" data-page="add">
+      <span class="nav-icon">+</span>
+      <span class="nav-label">Add</span>
+    </button>
+    <button class="nav-item" data-page="weight">
+      <span class="nav-icon">⚖️</span>
+      <span class="nav-label">Weight</span>
+    </button>
+    <button class="nav-item" data-page="progress">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Progress</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODALS
+     ══════════════════════════════════════════════════ -->
+
+<!-- Food Detail Modal -->
+<div id="food-detail-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title" id="fd-name">Food Name</h3>
+    <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: -12px; margin-bottom: 16px" id="fd-serving">per 100g</p>
+
+    <!-- Quantity Selector -->
+    <div class="qty-selector">
+      <button class="qty-btn" onclick="app.adjustServings(-0.5)">−</button>
+      <span class="qty-value" id="fd-qty">1.0</span>
+      <button class="qty-btn" onclick="app.adjustServings(0.5)">+</button>
+    </div>
+    <p style="text-align:center; color: var(--text-muted); font-size: 0.75rem; margin-top: -8px;">servings</p>
+
+    <!-- Nutrients Grid -->
+    <div class="nutrient-grid">
+      <div class="nutrient-item cal">
+        <span class="ni-label">Calories</span>
+        <span class="ni-value" id="fd-cal">0</span>
+      </div>
+      <div class="nutrient-item protein">
+        <span class="ni-label">Protein</span>
+        <span class="ni-value" id="fd-protein">0g</span>
+      </div>
+      <div class="nutrient-item carbs">
+        <span class="ni-label">Carbs</span>
+        <span class="ni-value" id="fd-carbs">0g</span>
+      </div>
+      <div class="nutrient-item fat">
+        <span class="ni-label">Fat</span>
+        <span class="ni-value" id="fd-fat">0g</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 20px">
+      <button class="btn btn-secondary" onclick="app.closeModal('food-detail-modal')" style="flex: 0 0 auto">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="app.addFoodToMeal()">Add to Meal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Modal -->
+<div id="quick-add-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">⚡ Quick Add</h3>
+    <div class="form-group">
+      <label class="form-label" for="qa-name">Description (optional)</label>
+      <input type="text" id="qa-name" class="form-input" placeholder="e.g., Afternoon snack">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="qa-calories">Calories</label>
+      <input type="number" id="qa-calories" class="form-input" placeholder="Enter calories">
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 16px">
+      <button class="btn btn-secondary" onclick="app.closeModal('quick-add-modal')" style="flex: 0 0 auto">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="app.quickAddCalories()">Add Calories</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">⚙️ Settings</h3>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Profile</div>
+      <div class="form-group">
+        <label class="form-label" for="set-name">Name</label>
+        <input type="text" id="set-name" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-target-weight">Target Weight (kg)</label>
+        <input type="number" id="set-target-weight" class="form-input" step="0.1">
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Daily Targets</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="set-calorie">Calories (kcal)</label>
+          <input type="number" id="set-calorie" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="set-water">Water (ml)</label>
+          <input type="number" id="set-water" class="form-input">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="set-protein">Protein (g)</label>
+          <input type="number" id="set-protein" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="set-carbs">Carbs (g)</label>
+          <input type="number" id="set-carbs" class="form-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="set-fat">Fat (g)</label>
+        <input type="number" id="set-fat" class="form-input">
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 16px">
+      <button class="btn btn-secondary" onclick="app.closeModal('settings-modal')" style="flex: 0 0 auto">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="app.saveSettings()">Save Settings</button>
+    </div>
+
+    <button class="btn btn-danger btn-full" onclick="app.resetAllData()" style="margin-top: 16px">
+      🗑 Reset All Data
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCRIPTS
+     ══════════════════════════════════════════════════ -->
+<script src="js/db.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/foods-data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // ── iOS Native-App Behavior ──
+  (function() {
+    // Hide splash screen once app is ready
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('ios-splash');
+        if (splash) {
+          splash.classList.add('hide');
+          setTimeout(() => splash.remove(), 500);
+        }
+      }, 800);
+    });
+
+    // Prevent iOS "rubber band" bounce on edges
+    document.body.addEventListener('touchmove', function(e) {
+      if (e.target.closest('.page, .modal, .food-list, .weight-history-list')) return;
+      if (!e.target.closest('[class*="scroll"]')) {
+        // Allow scrolling inside scrollable containers
+      }
+    }, { passive: true });
+
+    // In standalone mode, prevent links from opening Safari
+    if (window.navigator.standalone) {
+      document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.href.includes('javascript:')) {
+          e.preventDefault();
+          window.location = link.href;
+        }
+      });
+    }
+
+    // Detect standalone mode and add class for CSS
+    if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+      document.documentElement.classList.add('standalone');
+    }
+  })();
+</script>
+
+</body>
+</html>
