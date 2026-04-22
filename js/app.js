@@ -11,6 +11,8 @@ class NutriApp {
     this.selectedMealType = 'breakfast';
     this.selectedActivityType = null;
     this.foodServings = 1;
+    this.dateRangeOffset = 0; // for date strip week navigation
+    this._prevCalRemaining = null; // for animated counter
   }
 
   // ══════════════════════════════════════════════════
@@ -24,6 +26,7 @@ class NutriApp {
       this.showOnboarding();
     } else {
       this.hideOnboarding();
+      this.renderDateStrip();
       this.navigateTo('dashboard');
     }
 
@@ -255,8 +258,9 @@ class NutriApp {
       this.profile.proteinTarget, this.profile.carbsTarget, this.profile.fatTarget
     );
 
-    // Center numbers
-    document.getElementById('cal-remaining').textContent = remaining;
+    // Center numbers - ANIMATED
+    const calEl = document.getElementById('cal-remaining');
+    this.animateCounter(calEl, remaining);
     document.getElementById('cal-subtitle').textContent =
       `${summary.totalCalories} eaten • ${target} goal`;
 
@@ -267,6 +271,11 @@ class NutriApp {
       `${Math.round(summary.totalCarbs)}/${this.profile.carbsTarget}g`;
     document.getElementById('macro-fat').textContent =
       `${Math.round(summary.totalFat)}/${this.profile.fatTarget}g`;
+
+    // Check for goal celebration 🎉
+    if (summary.totalCalories > 0) {
+      this.checkGoalCelebration(summary.totalCalories, target);
+    }
 
     // Weight stat
     const weights = await window.nutriDB.getWeights();
@@ -405,25 +414,44 @@ class NutriApp {
       }
     });
 
+    // Render favorites & recents
+    this.renderFoodFavorites();
+
     // Initial render
     this.renderFoodResults('');
     this.renderLoggedMeals();
   }
 
   renderFoodResults(query) {
-    const results = searchFoods(query);
+    // Merge custom foods with built-in
+    const customFoods = this.getCustomFoods();
+    let results;
+    if (!query || query.length === 0) {
+      // Show custom foods first, then built-in
+      results = [...customFoods, ...searchFoods('')];
+    } else {
+      const builtInResults = searchFoods(query);
+      const customResults = customFoods.filter(f =>
+        f.name.toLowerCase().includes(query.toLowerCase())
+      );
+      results = [...customResults, ...builtInResults];
+    }
     const container = document.getElementById('food-results');
     if (!container) return;
 
-    container.innerHTML = results.map(food => `
-      <div class="food-result" onclick="app.showFoodDetailModal(${JSON.stringify(food).replace(/"/g, '&quot;')})">
-        <div class="food-result-info">
-          <h4>${food.name}</h4>
-          <p>${food.serving} • P:${food.protein}g C:${food.carbs}g F:${food.fat}g</p>
+    container.innerHTML = results.map(food => {
+      const isFav = this.isFavorite(food.name);
+      const starClass = isFav ? 'fav-star active' : 'fav-star';
+      return `
+      <div class="food-result">
+        <div class="food-result-info" onclick="app.showFoodDetailModal(${JSON.stringify(food).replace(/"/g, '&quot;')})">
+          <h4>${food.custom ? '🍳 ' : ''}${food.name}</h4>
+          <p>${food.serving} \u2022 P:${food.protein}g C:${food.carbs}g F:${food.fat}g</p>
         </div>
         <span class="food-result-cal">${food.cal} kcal</span>
-      </div>
-    `).join('');
+        <button class="${starClass}" onclick="app.toggleFavorite('${food.name.replace(/'/g, "\\'")}')">★</button>
+      </div>`;
+    }).join('');
   }
 
   async renderLoggedMeals() {
@@ -507,6 +535,7 @@ class NutriApp {
 
     this.closeModal('food-detail-modal');
     this.showToast(`✅ ${f.name} added to ${this.selectedMealType}`, 'success');
+    this.addToRecentFoods(f); // Track for recent foods
     this.renderLoggedMeals();
   }
 
@@ -956,6 +985,426 @@ class NutriApp {
   dismissInstallBanner() {
     document.getElementById('install-banner')?.classList.add('hidden');
     localStorage.setItem('install-dismissed', Date.now().toString());
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 1: DATE NAVIGATION STRIP
+  // ══════════════════════════════════════════════════
+  renderDateStrip() {
+    const container = document.getElementById('date-strip');
+    if (!container) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // Calculate the start of the displayed week
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - 3 + this.dateRangeOffset);
+
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+
+      const isToday = d.getTime() === today.getTime();
+      const isSelected = d.toDateString() === this.currentDate.toDateString();
+      const isFuture = d > today;
+      const dateStr = d.toISOString().split('T')[0];
+
+      let cls = 'date-strip-day';
+      if (isSelected) cls += ' selected';
+      if (isToday) cls += ' today';
+      if (isFuture) cls += ' future';
+
+      html += `<button class="${cls}" onclick="app.selectDate('${dateStr}')" ${isFuture ? 'disabled' : ''}>
+        <span class="dsd-name">${days[d.getDay()]}</span>
+        <span class="dsd-num">${d.getDate()}</span>
+        ${isToday ? '<span class="dsd-dot"></span>' : ''}
+      </button>`;
+    }
+    container.innerHTML = html;
+  }
+
+  selectDate(dateStr) {
+    this.currentDate = new Date(dateStr + 'T12:00:00');
+    this.renderDateStrip();
+    this.renderDashboard();
+  }
+
+  shiftDateRange(days) {
+    this.dateRangeOffset += days;
+    this.renderDateStrip();
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 2: ANIMATED NUMBER COUNTERS
+  // ══════════════════════════════════════════════════
+  animateCounter(element, targetValue, duration = 600) {
+    if (!element) return;
+    const startValue = parseInt(element.textContent) || 0;
+    if (startValue === targetValue) return;
+
+    const startTime = performance.now();
+    const diff = targetValue - startValue;
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(startValue + diff * eased);
+      element.textContent = current;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 3: CONFETTI CELEBRATION
+  // ══════════════════════════════════════════════════
+  fireConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#00D4AA', '#7C4DFF', '#FFD93D', '#FF6B6B', '#4ECDC4', '#45B7D1'];
+
+    // Create 80 particles
+    for (let i = 0; i < 80; i++) {
+      particles.push({
+        x: canvas.width / 2 + (Math.random() - 0.5) * 100,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 12,
+        vy: -Math.random() * 14 - 4,
+        size: Math.random() * 8 + 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        rotSpeed: (Math.random() - 0.5) * 10,
+        gravity: 0.3,
+        opacity: 1,
+        shape: Math.random() > 0.5 ? 'rect' : 'circle'
+      });
+    }
+
+    let frame = 0;
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+
+      particles.forEach(p => {
+        if (p.opacity <= 0) return;
+        alive = true;
+
+        p.x += p.vx;
+        p.vy += p.gravity;
+        p.y += p.vy;
+        p.rotation += p.rotSpeed;
+        p.opacity -= 0.012;
+        p.vx *= 0.99;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.globalAlpha = Math.max(0, p.opacity);
+        ctx.fillStyle = p.color;
+
+        if (p.shape === 'rect') {
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      frame++;
+      if (alive && frame < 150) {
+        requestAnimationFrame(animate);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+    animate();
+  }
+
+  checkGoalCelebration(eaten, goal) {
+    // Trigger confetti when user reaches 90-100% of calorie goal
+    const pct = eaten / goal;
+    const celebratedToday = localStorage.getItem('celebrated-' + this.getDateKey());
+    if (pct >= 0.9 && pct <= 1.05 && !celebratedToday) {
+      localStorage.setItem('celebrated-' + this.getDateKey(), 'true');
+      setTimeout(() => {
+        this.fireConfetti();
+        this.showToast('🎉 You hit your calorie goal!', 'success');
+      }, 300);
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 4: FAVORITES & RECENT FOODS
+  // ══════════════════════════════════════════════════
+  getRecentFoods() {
+    try {
+      return JSON.parse(localStorage.getItem('recent-foods') || '[]');
+    } catch { return []; }
+  }
+
+  addToRecentFoods(food) {
+    let recents = this.getRecentFoods();
+    // Remove duplicates
+    recents = recents.filter(f => f.name !== food.name);
+    // Add to front
+    recents.unshift({
+      name: food.name,
+      cal: food.cal,
+      protein: food.protein || 0,
+      carbs: food.carbs || 0,
+      fat: food.fat || 0,
+      serving: food.serving || '1 serving'
+    });
+    // Keep only last 10
+    recents = recents.slice(0, 10);
+    localStorage.setItem('recent-foods', JSON.stringify(recents));
+  }
+
+  getFavoriteFoods() {
+    try {
+      return JSON.parse(localStorage.getItem('favorite-foods') || '[]');
+    } catch { return []; }
+  }
+
+  toggleFavorite(foodName) {
+    let favorites = this.getFavoriteFoods();
+    const idx = favorites.findIndex(f => f.name === foodName);
+    if (idx >= 0) {
+      favorites.splice(idx, 1);
+      this.showToast('Removed from favorites', 'info');
+    } else {
+      // Find the food data
+      const allFoods = this.getAllFoodsIncludingCustom();
+      const food = allFoods.find(f => f.name === foodName);
+      if (food) {
+        favorites.push({
+          name: food.name,
+          cal: food.cal,
+          protein: food.protein || 0,
+          carbs: food.carbs || 0,
+          fat: food.fat || 0,
+          serving: food.serving || '1 serving'
+        });
+        this.showToast('⭐ Added to favorites!', 'success');
+      }
+    }
+    localStorage.setItem('favorite-foods', JSON.stringify(favorites));
+    this.renderFoodFavorites();
+  }
+
+  isFavorite(foodName) {
+    return this.getFavoriteFoods().some(f => f.name === foodName);
+  }
+
+  renderFoodFavorites() {
+    const container = document.getElementById('food-favorites');
+    if (!container) return;
+
+    const recents = this.getRecentFoods();
+    const favorites = this.getFavoriteFoods();
+
+    if (recents.length === 0 && favorites.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+
+    if (favorites.length > 0) {
+      html += `<div class="fav-section">
+        <div class="fav-header">⭐ Favorites</div>
+        <div class="fav-chips">
+          ${favorites.map(f => `
+            <button class="fav-chip" onclick="app.quickLogFromFav('${f.name.replace(/'/g, "\\'")}')">
+              ${f.name} <span class="fav-chip-cal">${f.cal}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    if (recents.length > 0) {
+      html += `<div class="fav-section">
+        <div class="fav-header">🕐 Recent</div>
+        <div class="fav-chips">
+          ${recents.slice(0, 6).map(f => `
+            <button class="fav-chip fav-chip-recent" onclick="app.quickLogFromFav('${f.name.replace(/'/g, "\\'")}')">
+              ${f.name} <span class="fav-chip-cal">${f.cal}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  quickLogFromFav(foodName) {
+    const allFoods = [...this.getFavoriteFoods(), ...this.getRecentFoods()];
+    const food = allFoods.find(f => f.name === foodName);
+    if (food) {
+      this.showFoodDetail(food);
+    }
+  }
+
+  getAllFoodsIncludingCustom() {
+    const builtIn = window.NutriFoods.getAll();
+    const custom = this.getCustomFoods();
+    return [...custom, ...builtIn];
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 5: CUSTOM FOOD CREATOR
+  // ══════════════════════════════════════════════════
+  getCustomFoods() {
+    try {
+      return JSON.parse(localStorage.getItem('custom-foods') || '[]');
+    } catch { return []; }
+  }
+
+  showCustomFoodModal() {
+    // Clear the form
+    ['cf-name', 'cf-cal', 'cf-protein', 'cf-carbs', 'cf-fat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('cf-serving').value = '100g';
+    this.openModal('custom-food-modal');
+  }
+
+  saveCustomFood() {
+    const name = document.getElementById('cf-name')?.value?.trim();
+    const serving = document.getElementById('cf-serving')?.value?.trim() || '100g';
+    const cal = parseInt(document.getElementById('cf-cal')?.value) || 0;
+    const protein = parseFloat(document.getElementById('cf-protein')?.value) || 0;
+    const carbs = parseFloat(document.getElementById('cf-carbs')?.value) || 0;
+    const fat = parseFloat(document.getElementById('cf-fat')?.value) || 0;
+
+    if (!name) {
+      this.showToast('Please enter a food name', 'error');
+      return;
+    }
+    if (cal === 0) {
+      this.showToast('Please enter calories', 'error');
+      return;
+    }
+
+    const customFoods = this.getCustomFoods();
+    // Check for duplicate
+    const existingIdx = customFoods.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
+    if (existingIdx >= 0) {
+      customFoods[existingIdx] = { name, cal, protein, carbs, fat, serving, custom: true };
+    } else {
+      customFoods.push({ name, cal, protein, carbs, fat, serving, custom: true });
+    }
+
+    localStorage.setItem('custom-foods', JSON.stringify(customFoods));
+    this.closeModal('custom-food-modal');
+    this.showToast(`🍳 "${name}" saved!`, 'success');
+
+    // Refresh food search if on food page
+    if (this.currentPage === 'food') {
+      this.renderFoodPage();
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // FEATURE 6: EXPORT / IMPORT DATA
+  // ══════════════════════════════════════════════════
+  async exportData() {
+    try {
+      const data = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        profile: await window.nutriDB.getProfile(),
+        meals: await window.nutriDB.getAllMeals(),
+        weights: await window.nutriDB.getAllWeights(),
+        activities: await window.nutriDB.getAllActivities(),
+        customFoods: this.getCustomFoods(),
+        favoriteFoods: this.getFavoriteFoods(),
+        recentFoods: this.getRecentFoods()
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nutritrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      this.showToast('📤 Data exported!', 'success');
+    } catch (e) {
+      this.showToast('Export failed: ' + e.message, 'error');
+    }
+  }
+
+  async importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.version || !data.profile) {
+        throw new Error('Invalid backup file');
+      }
+
+      // Confirm before importing
+      if (!confirm('This will replace all your current data. Continue?')) {
+        event.target.value = '';
+        return;
+      }
+
+      // Import profile
+      await window.nutriDB.saveProfile(data.profile);
+
+      // Import meals
+      if (data.meals?.length) {
+        for (const meal of data.meals) {
+          await window.nutriDB.addMeal(meal);
+        }
+      }
+
+      // Import weights
+      if (data.weights?.length) {
+        for (const w of data.weights) {
+          await window.nutriDB.addWeight(w.weight, w.date);
+        }
+      }
+
+      // Import localStorage data
+      if (data.customFoods) localStorage.setItem('custom-foods', JSON.stringify(data.customFoods));
+      if (data.favoriteFoods) localStorage.setItem('favorite-foods', JSON.stringify(data.favoriteFoods));
+      if (data.recentFoods) localStorage.setItem('recent-foods', JSON.stringify(data.recentFoods));
+
+      // Reload
+      this.profile = await window.nutriDB.getProfile();
+      this.showToast('📥 Data imported successfully!', 'success');
+      this.closeModal('settings-modal');
+      this.renderDashboard();
+
+      event.target.value = '';
+    } catch (e) {
+      this.showToast('Import failed: ' + e.message, 'error');
+      event.target.value = '';
+    }
   }
 }
 

@@ -216,6 +216,15 @@
        PAGE: DASHBOARD
        ════════════════════════════════════════════════ -->
   <div id="page-dashboard" class="page active">
+    <!-- Date Navigation Strip -->
+    <div class="date-strip-container">
+      <button class="date-nav-btn" onclick="app.shiftDateRange(-7)">‹</button>
+      <div class="date-strip" id="date-strip">
+        <!-- Rendered by JS -->
+      </div>
+      <button class="date-nav-btn" onclick="app.shiftDateRange(7)">›</button>
+    </div>
+
     <!-- Greeting -->
     <div class="greeting" id="dash-greeting">
       <h2>Good morning</h2>
@@ -302,7 +311,10 @@
        PAGE: FOOD
        ════════════════════════════════════════════════ -->
   <div id="page-food" class="page">
-    <h2 class="section-title">Log Food</h2>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <h2 class="section-title" style="margin-bottom: 0">Log Food</h2>
+      <button class="btn btn-sm btn-secondary" onclick="app.showCustomFoodModal()" style="margin-bottom: 16px">+ Custom</button>
+    </div>
 
     <!-- Meal Type Tabs -->
     <div class="meal-tabs">
@@ -310,6 +322,11 @@
       <button class="meal-tab" data-meal="lunch">☀️ Lunch</button>
       <button class="meal-tab" data-meal="dinner">🌙 Dinner</button>
       <button class="meal-tab" data-meal="snack">🍪 Snack</button>
+    </div>
+
+    <!-- Recent & Favorites -->
+    <div id="food-favorites" class="food-favorites-section">
+      <!-- Rendered by JS -->
     </div>
 
     <!-- Search -->
@@ -693,11 +710,68 @@
       <button class="btn btn-primary btn-full" onclick="app.saveSettings()">Save Settings</button>
     </div>
 
+    <div class="settings-group" style="margin-top: 20px">
+      <div class="settings-group-title">Data Backup</div>
+      <div style="display: flex; gap: 10px">
+        <button class="btn btn-secondary btn-full btn-sm" onclick="app.exportData()">
+          📤 Export Data
+        </button>
+        <label class="btn btn-secondary btn-full btn-sm" style="cursor: pointer">
+          📥 Import Data
+          <input type="file" id="import-file" accept=".json" onchange="app.importData(event)" style="display: none">
+        </label>
+      </div>
+    </div>
+
     <button class="btn btn-danger btn-full" onclick="app.resetAllData()" style="margin-top: 16px">
       🗑 Reset All Data
     </button>
   </div>
 </div>
+
+
+<!-- Custom Food Creator Modal -->
+<div id="custom-food-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">🍳 Create Custom Food</h3>
+    <div class="form-group">
+      <label class="form-label" for="cf-name">Food Name</label>
+      <input type="text" id="cf-name" class="form-input" placeholder="e.g., Mom's rice pilaf">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="cf-serving">Serving Size</label>
+      <input type="text" id="cf-serving" class="form-input" placeholder="e.g., 1 plate (250g)" value="100g">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="cf-cal">Calories</label>
+        <input type="number" id="cf-cal" class="form-input" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cf-protein">Protein (g)</label>
+        <input type="number" id="cf-protein" class="form-input" placeholder="0" step="0.1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="cf-carbs">Carbs (g)</label>
+        <input type="number" id="cf-carbs" class="form-input" placeholder="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cf-fat">Fat (g)</label>
+        <input type="number" id="cf-fat" class="form-input" placeholder="0" step="0.1">
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 16px">
+      <button class="btn btn-secondary" onclick="app.closeModal('custom-food-modal')" style="flex: 0 0 auto">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="app.saveCustomFood()">💾 Save Food</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti Canvas (celebrations) -->
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999"></canvas>
 
 <!-- ══════════════════════════════════════════════════
      SCRIPTS

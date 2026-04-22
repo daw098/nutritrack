@@ -288,6 +288,34 @@ class NutriDB {
   getTodayStr() {
     return this._normalizeDate(new Date());
   }
+
+  // ── Export Helpers (for data backup) ──────────────
+  async getAllMeals() {
+    const store = this._tx('meals');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllWeights() {
+    const store = this._tx('weights');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllActivities() {
+    const store = this._tx('activities');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
 }
 
 // Export singleton

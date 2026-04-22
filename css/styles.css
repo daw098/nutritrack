@@ -1578,6 +1578,194 @@ body {
 }
 
 /* ══════════════════════════════════════════════════
+   DATE NAVIGATION STRIP
+   ══════════════════════════════════════════════════ */
+.date-strip-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.date-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+  font-family: 'Inter', sans-serif;
+}
+
+.date-nav-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.date-strip {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.date-strip-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  min-width: 42px;
+  transition: all var(--duration-fast);
+  position: relative;
+  font-family: 'Inter', sans-serif;
+}
+
+.date-strip-day:hover {
+  background: var(--bg-elevated);
+}
+
+.date-strip-day.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.date-strip-day.selected .dsd-name,
+.date-strip-day.selected .dsd-num {
+  color: var(--text-inverse);
+}
+
+.date-strip-day.today:not(.selected) {
+  border-color: var(--accent-dim);
+}
+
+.date-strip-day.future {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.dsd-name {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dsd-num {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dsd-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  bottom: 3px;
+}
+
+.date-strip-day.selected .dsd-dot {
+  background: var(--text-inverse);
+}
+
+/* ══════════════════════════════════════════════════
+   FAVORITES & RECENT FOODS
+   ══════════════════════════════════════════════════ */
+.food-favorites-section {
+  margin-bottom: 12px;
+}
+
+.fav-section {
+  margin-bottom: 10px;
+}
+
+.fav-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.fav-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  font-family: 'Inter', sans-serif;
+}
+
+.fav-chip:hover {
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+.fav-chip-cal {
+  color: var(--accent);
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+}
+
+.fav-chip-recent {
+  border-color: rgba(124, 77, 255, 0.15);
+}
+
+/* ── Favorite Star (on food results) ── */
+.fav-star {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  opacity: 0.4;
+  transition: all var(--duration-fast);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.fav-star:hover {
+  opacity: 0.8;
+}
+
+.fav-star.active {
+  color: #FFD93D;
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(255, 217, 61, 0.4);
+}
+
+/* ══════════════════════════════════════════════════
    GREETING
    ══════════════════════════════════════════════════ */
 .greeting {
