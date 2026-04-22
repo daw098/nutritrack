@@ -246,8 +246,12 @@ class NutriApp {
       let emoji = '🌅', text = 'Good morning';
       if (hour >= 12 && hour < 17) { emoji = '☀️'; text = 'Good afternoon'; }
       else if (hour >= 17) { emoji = '🌙'; text = 'Good evening'; }
+
+      const isToday = new Date().toDateString() === this.currentDate.toDateString();
+      const dateLabel = isToday ? 'Today' : this.formatDate(this.currentDate);
+
       greetEl.innerHTML = `<h2><span class="greeting-emoji">${emoji}</span>${text}, ${this.profile.name}</h2>
-        <p>${this.formatDate(this.currentDate)}</p>`;
+        <p>${dateLabel}</p>`;
     }
 
     // Calorie ring
@@ -950,6 +954,11 @@ class NutriApp {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  getDateKey() {
+    const d = this.currentDate;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   getActivityEmoji(type) {
     const map = {
       cardio: '🏃', strength: '🏋️', flexibility: '🧘',
@@ -1029,6 +1038,7 @@ class NutriApp {
   selectDate(dateStr) {
     this.currentDate = new Date(dateStr + 'T12:00:00');
     this.renderDateStrip();
+    this.updateHeaderDate();
     this.renderDashboard();
   }
 
