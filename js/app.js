@@ -313,11 +313,22 @@ class NutriApp {
     document.getElementById('dash-water-target').textContent = `/${(waterTarget/1000).toFixed(1)}L`;
     document.getElementById('dash-water-fill').style.width = `${waterPct}%`;
 
-    // Meals list
+    // Meals list - update title based on selected date
+    const isToday = new Date().toDateString() === this.currentDate.toDateString();
+    const mealsTitle = document.getElementById('dash-meals-title');
+    if (mealsTitle) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      mealsTitle.textContent = isToday ? "Today's Meals" : `${days[this.currentDate.getDay()]}'s Meals`;
+    }
+    const actTitle = document.getElementById('dash-activity-title');
+    if (actTitle) {
+      actTitle.textContent = isToday ? 'Activity' : `${this.formatDateShort(this.currentDate)} Activity`;
+    }
+
     this.renderDashboardMeals(summary.meals);
 
     // Activity
-    this.renderDashboardActivity(summary.activities, summary.totalBurned);
+    this.renderDashboardActivity(summary.activities, summary.totalBurned, isToday);
   }
 
   renderDashboardMeals(meals) {
@@ -352,14 +363,14 @@ class NutriApp {
     container.innerHTML = html;
   }
 
-  renderDashboardActivity(activities, totalBurned) {
+  renderDashboardActivity(activities, totalBurned, isToday = true) {
     const container = document.getElementById('dash-activity');
     if (!container) return;
 
     if (activities.length === 0) {
       container.innerHTML = `
         <div class="empty-state" style="padding: 20px 0">
-          <p style="color: var(--text-muted); font-size: 0.82rem;">No activities logged today</p>
+          <p style="color: var(--text-muted); font-size: 0.82rem;">No activities logged${isToday ? ' today' : ''}</p>
         </div>`;
       return;
     }
