@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nutritrack-v4';
+const CACHE_NAME = 'nouri-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -31,4 +31,38 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
   );
+});
+
+// ── Background Sync: Save pending activity data ──
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-activity-tracker') {
+    event.waitUntil(
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'SYNC_TRACKER_STATE' });
+        });
+      })
+    );
+  }
+});
+
+// ── Periodic Background Sync (where supported) ──
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'activity-keepalive') {
+    event.waitUntil(
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'PERIODIC_KEEPALIVE' });
+        });
+      })
+    );
+  }
+});
+
+// ── Handle messages from app ──
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'TRACKER_ACTIVE') {
+    // Keep the service worker alive while tracker is active
+    // This helps prevent iOS from killing the app
+  }
 });

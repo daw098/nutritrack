@@ -1,7 +1,7 @@
 {
-  "name": "NutriTrack — Daily Diet Progress",
-  "short_name": "NutriTrack",
-  "description": "Track your weight, nutrition, and activity with a beautiful, privacy-first diet app.",
+  "name": "Nouri — Daily Diet Progress",
+  "short_name": "Nouri",
+  "description": "Track food, body metrics, heart rate, and activity with a beautiful, privacy-first diet app.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

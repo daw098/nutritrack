@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="description" content="NutriTrack — Track your weight, nutrition, and activity with a beautiful, privacy-first diet app.">
+  <meta name="description" content="Nouri — Track food, body metrics, heart rate, and activity with a privacy-first diet app.">
   <meta name="theme-color" content="#0A0A0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="NutriTrack">
-  <title>NutriTrack — Daily Diet Progress</title>
+  <meta name="apple-mobile-web-app-title" content="Nouri">
+  <title>Nouri — Daily Diet Progress</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -56,7 +56,7 @@
 <!-- App Splash Screen (shown instantly while app loads) -->
 <div id="app-splash">
   <div class="splash-icon">🥗</div>
-  <div class="splash-title">NutriTrack</div>
+  <div class="splash-title">Nouri</div>
   <div class="splash-dots">
     <div class="splash-dot"></div>
     <div class="splash-dot"></div>
@@ -69,7 +69,7 @@
   <div class="install-banner-content">
     <div class="install-banner-icon">🥗</div>
     <div class="install-banner-text">
-      <strong>Install NutriTrack</strong>
+      <strong>Install Nouri</strong>
       <span>Add to your home screen for the best experience</span>
     </div>
   </div>
@@ -91,7 +91,7 @@
 <div id="onboarding" class="onboarding-overlay hidden">
   <div class="onboarding-card">
     <div class="onboarding-logo">🥗</div>
-    <h1 class="onboarding-title">NutriTrack</h1>
+    <h1 class="onboarding-title">Nouri</h1>
     <p class="onboarding-subtitle">Your personal diet &amp; health companion.<br>Let's set up your profile in 60 seconds.</p>
 
     <div class="onboarding-progress">
@@ -204,7 +204,7 @@
   <!-- ── Header ── -->
   <header class="app-header">
     <div>
-      <div class="header-title">NutriTrack</div>
+      <div class="header-title">Nouri</div>
       <div class="header-date" id="header-date"></div>
     </div>
     <div class="header-actions">
@@ -256,6 +256,23 @@
       </div>
     </div>
 
+    <!-- Daily Coach -->
+    <div class="card coach-card" id="daily-coach-card">
+      <div class="coach-header">
+        <div>
+          <span class="card-title">Daily Coach</span>
+          <h3 id="coach-title">Building your plan</h3>
+        </div>
+        <div class="coach-score">
+          <span id="coach-score">0</span>
+          <small>/100</small>
+        </div>
+      </div>
+      <p class="coach-message" id="coach-message">Log a meal to unlock smarter guidance.</p>
+      <div class="coach-metrics" id="coach-metrics"></div>
+      <div class="coach-actions" id="coach-actions"></div>
+    </div>
+
     <!-- Weight & Water Row -->
     <div class="stats-row">
       <div class="stat-card weight-card" onclick="app.navigateTo('weight')">
@@ -281,6 +298,23 @@
           <button class="water-btn" onclick="app.quickAddWater(250)">+250ml</button>
           <button class="water-btn" onclick="app.quickAddWater(500)">+500ml</button>
         </div>
+      </div>
+      <div class="stat-card belly-card" onclick="app.navigateTo('weight')">
+        <div class="stat-icon">📏</div>
+        <div>
+          <span class="stat-value" id="dash-belly-value">—</span>
+          <span class="stat-unit" id="dash-belly-unit">cm</span>
+        </div>
+        <div class="stat-change neutral" id="dash-belly-change">No data yet</div>
+      </div>
+      <div class="stat-card hr-card">
+        <div class="stat-icon">❤️</div>
+        <div>
+          <span class="stat-value" id="dash-hr-value">—</span>
+          <span class="stat-unit">bpm</span>
+        </div>
+        <div class="stat-change neutral" id="dash-hr-zone">No data yet</div>
+        <button class="hr-log-btn" onclick="app.showHeartRateModal()">Measure BPM</button>
       </div>
     </div>
 
@@ -329,6 +363,11 @@
       <!-- Rendered by JS -->
     </div>
 
+    <!-- Smart Picks -->
+    <div id="food-smart-picks" class="smart-picks-section">
+      <!-- Rendered by JS -->
+    </div>
+
     <!-- Search -->
     <div class="search-container">
       <span class="search-icon">🔍</span>
@@ -374,20 +413,68 @@
       </button>
     </div>
 
+    <!-- Belly Measurement Card -->
+    <div class="card belly-input-card">
+      <div class="card-header">
+        <span class="card-title">Belly Measurement</span>
+        <span class="card-action" id="belly-last-label">No data yet</span>
+      </div>
+      <div class="belly-input-grid">
+        <div class="belly-current">
+          <span class="belly-current-label">Latest</span>
+          <span class="belly-current-value" id="belly-display">—</span>
+        </div>
+        <div class="form-group belly-value-group">
+          <label class="form-label" for="belly-input">Today</label>
+          <div class="measurement-input-wrap">
+            <input type="number" id="belly-input" class="form-input" placeholder="90" step="0.1" inputmode="decimal">
+            <span id="belly-input-unit">cm</span>
+          </div>
+        </div>
+      </div>
+      <div class="weight-quick-btns belly-quick-btns">
+        <button class="weight-quick-btn" onclick="app.adjustBellyMeasurement(-1)">-1</button>
+        <button class="weight-quick-btn" onclick="app.adjustBellyMeasurement(-0.5)">-0.5</button>
+        <button class="weight-quick-btn" onclick="app.adjustBellyMeasurement(0.5)">+0.5</button>
+        <button class="weight-quick-btn" onclick="app.adjustBellyMeasurement(1)">+1</button>
+      </div>
+      <input type="text" id="belly-note" class="form-input belly-note-input" placeholder="Note (optional)">
+      <button class="btn btn-primary btn-full" onclick="app.saveBellyMeasurement()" style="margin-top: 12px">
+        Save Belly
+      </button>
+    </div>
+
     <!-- Chart -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Trend</span>
+        <span class="card-title">Weight Trend</span>
       </div>
       <div class="chart-period-tabs">
-        <button class="chart-period-tab" data-period="week">1W</button>
-        <button class="chart-period-tab active" data-period="month">1M</button>
-        <button class="chart-period-tab" data-period="3month">3M</button>
-        <button class="chart-period-tab" data-period="year">1Y</button>
-        <button class="chart-period-tab" data-period="all">All</button>
+        <button class="chart-period-tab weight-period-tab" data-period="week">1W</button>
+        <button class="chart-period-tab weight-period-tab active" data-period="month">1M</button>
+        <button class="chart-period-tab weight-period-tab" data-period="3month">3M</button>
+        <button class="chart-period-tab weight-period-tab" data-period="year">1Y</button>
+        <button class="chart-period-tab weight-period-tab" data-period="all">All</button>
       </div>
       <div class="chart-container">
         <canvas id="weight-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Belly Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Belly Trend</span>
+      </div>
+      <div class="chart-period-tabs">
+        <button class="chart-period-tab belly-period-tab" data-period="week">1W</button>
+        <button class="chart-period-tab belly-period-tab active" data-period="month">1M</button>
+        <button class="chart-period-tab belly-period-tab" data-period="3month">3M</button>
+        <button class="chart-period-tab belly-period-tab" data-period="year">1Y</button>
+        <button class="chart-period-tab belly-period-tab" data-period="all">All</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="belly-chart"></canvas>
       </div>
     </div>
 
@@ -416,6 +503,15 @@
         <!-- Rendered by JS -->
       </div>
     </div>
+
+    <div class="card" style="margin-top: 14px">
+      <div class="card-header">
+        <span class="card-title">Belly History</span>
+      </div>
+      <div id="belly-history" class="weight-history-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
   </div>
 
   <!-- ════════════════════════════════════════════════
@@ -424,11 +520,118 @@
   <div id="page-activity" class="page">
     <h2 class="section-title">Log Activity</h2>
 
+    <!-- Background Tracking Status Banner (iOS) -->
+    <div id="bg-tracking-banner" class="bg-tracking-banner hidden">
+      <div class="bg-tracking-pulse"></div>
+      <span id="bg-tracking-text">Background tracking active</span>
+      <button class="bg-tracking-dismiss" onclick="app.dismissBgBanner()">✕</button>
+    </div>
+
+    <!-- Walk / Run Tracker — DEEP TRACKING -->
+    <div class="card route-tracker-card">
+      <div class="card-header">
+        <span class="card-title">Walk / Run Tracker</span>
+        <span class="card-action" id="route-tracker-status">Ready</span>
+      </div>
+      <div class="tracker-mode-tabs">
+        <button class="tracker-mode active" data-tracker-mode="walking" onclick="app.setRouteTrackerMode('walking')">Walk</button>
+        <button class="tracker-mode" data-tracker-mode="running" onclick="app.setRouteTrackerMode('running')">Run</button>
+      </div>
+
+      <!-- Primary Metrics: Big display -->
+      <div class="tracker-hero-grid">
+        <div class="tracker-hero-metric primary">
+          <span class="thm-value" id="tracker-time">00:00</span>
+          <span class="thm-label">Time</span>
+        </div>
+        <div class="tracker-hero-metric primary">
+          <span class="thm-value" id="tracker-distance">0.00</span>
+          <span class="thm-label" id="tracker-distance-unit">km</span>
+        </div>
+      </div>
+
+      <!-- Secondary Metrics Grid -->
+      <div class="tracker-metrics-grid">
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon">⏱</span>
+          <span class="tmc-value" id="tracker-pace">—</span>
+          <span class="tmc-label">Pace</span>
+        </div>
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon">🔥</span>
+          <span class="tmc-value" id="tracker-calories">0</span>
+          <span class="tmc-label">kcal</span>
+        </div>
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon">👟</span>
+          <span class="tmc-value" id="tracker-steps">0</span>
+          <span class="tmc-label">Steps</span>
+        </div>
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon">📈</span>
+          <span class="tmc-value" id="tracker-elevation">0m</span>
+          <span class="tmc-label">Elev Gain</span>
+        </div>
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon">⚡</span>
+          <span class="tmc-value" id="tracker-speed">0.0</span>
+          <span class="tmc-label" id="tracker-speed-unit">km/h</span>
+        </div>
+        <div class="tracker-metric-cell">
+          <span class="tmc-icon" id="tracker-zone-icon">🟢</span>
+          <span class="tmc-value" id="tracker-zone">—</span>
+          <span class="tmc-label">Zone</span>
+        </div>
+      </div>
+
+      <!-- Live Split Display -->
+      <div id="tracker-live-splits" class="tracker-live-splits hidden">
+        <div class="tls-header">
+          <span>Live Splits</span>
+          <span id="tracker-current-km">—</span>
+        </div>
+        <div id="tracker-splits-list" class="tls-list">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- GPS Quality Indicator -->
+      <div class="tracker-gps-bar" id="tracker-gps-bar">
+        <div class="gps-signal-dots">
+          <span class="gps-dot"></span>
+          <span class="gps-dot"></span>
+          <span class="gps-dot"></span>
+          <span class="gps-dot"></span>
+        </div>
+        <span class="gps-label" id="tracker-gps-label">GPS Ready</span>
+      </div>
+
+      <div class="tracker-controls">
+        <button class="btn btn-primary btn-full tracker-start-btn" id="tracker-start-btn" onclick="app.startRouteTracker()">
+          <span class="tracker-btn-icon">▶</span> Start
+        </button>
+        <button class="btn btn-pause btn-full" id="tracker-pause-btn" onclick="app.pauseRouteTracker()" style="display:none">
+          <span class="tracker-btn-icon">⏸</span> Pause
+        </button>
+        <button class="btn btn-resume btn-full" id="tracker-resume-btn" onclick="app.resumeRouteTracker()" style="display:none">
+          <span class="tracker-btn-icon">▶</span> Resume
+        </button>
+        <button class="btn btn-finish btn-full" id="tracker-finish-btn" onclick="app.finishRouteTracker()" disabled>
+          <span class="tracker-btn-icon">⏹</span> Finish
+        </button>
+        <button class="btn btn-secondary tracker-reset-btn" id="tracker-reset-btn" onclick="app.resetRouteTracker()">Reset</button>
+      </div>
+    </div>
+
     <!-- Activity Type Grid -->
     <div class="activity-type-grid">
       <div class="activity-type-card" data-type="cardio">
-        <div class="at-icon">🏃</div>
+        <div class="at-icon">🔥</div>
         <div class="at-label">Cardio</div>
+      </div>
+      <div class="activity-type-card" data-type="running">
+        <div class="at-icon">🏃</div>
+        <div class="at-label">Running</div>
       </div>
       <div class="activity-type-card" data-type="strength">
         <div class="at-icon">🏋️</div>
@@ -480,14 +683,48 @@
           <input type="number" id="act-calories" class="form-input" placeholder="Auto estimate">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="act-distance">Distance (km)</label>
+          <input type="number" id="act-distance" class="form-input" placeholder="Optional" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="act-intensity">Intensity</label>
+          <select id="act-intensity" class="form-select">
+            <option value="easy">Easy</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="vigorous">Vigorous</option>
+            <option value="max">Maximum</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="act-notes">Notes</label>
+        <input type="text" id="act-notes" class="form-input" placeholder="How did it feel?">
+      </div>
       <button class="btn btn-primary btn-full" onclick="app.saveActivity()" style="margin-top: 8px">
         Log Activity
       </button>
     </div>
 
+    <!-- Today's Activity Summary -->
+    <div class="card activity-day-summary" id="activity-day-summary" style="margin-top: 14px">
+      <!-- Rendered by JS -->
+    </div>
+
     <!-- Activity Log -->
     <div class="card" style="margin-top: 14px">
       <div id="activity-log-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Weekly Activity Stats -->
+    <div class="card" style="margin-top: 14px">
+      <div class="card-header">
+        <span class="card-title">This Week</span>
+      </div>
+      <div id="weekly-activity-stats" class="weekly-activity-stats">
         <!-- Rendered by JS -->
       </div>
     </div>
@@ -528,6 +765,26 @@
         <div class="ps-value" id="prog-avg-cal">—</div>
         <div class="ps-label">Avg Daily Cal</div>
       </div>
+      <div class="progress-stat">
+        <div class="ps-icon">❤️</div>
+        <div class="ps-value" id="prog-avg-hr">—</div>
+        <div class="ps-label">Avg Heart Rate</div>
+      </div>
+      <div class="progress-stat">
+        <div class="ps-icon">📏</div>
+        <div class="ps-value" id="prog-belly-change">—</div>
+        <div class="ps-label">Belly Change</div>
+      </div>
+    </div>
+
+    <!-- Coach Insights -->
+    <div class="card insight-card">
+      <div class="card-header">
+        <span class="card-title">Coach Insights</span>
+      </div>
+      <div id="progress-insights" class="insight-list">
+        <!-- Rendered by JS -->
+      </div>
     </div>
 
     <!-- Calorie Bar Chart -->
@@ -562,6 +819,16 @@
       </div>
       <div class="chart-container">
         <canvas id="progress-weight-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Belly Progress Chart -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Belly Trend</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="progress-belly-chart"></canvas>
       </div>
     </div>
   </div>
@@ -635,6 +902,56 @@
     <div style="display: flex; gap: 10px; margin-top: 20px">
       <button class="btn btn-secondary" onclick="app.closeModal('food-detail-modal')" style="flex: 0 0 auto">Cancel</button>
       <button class="btn btn-primary btn-full" onclick="app.addFoodToMeal()">Add to Meal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Heart Rate Modal -->
+<div id="heart-rate-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">❤️ Heart Rate</h3>
+    <div class="hr-camera-card">
+      <button type="button" class="hr-camera-start" id="hr-camera-start" onclick="app.startCameraHeartRate()">
+        Measure with Camera
+      </button>
+      <p class="hr-camera-copy">Cover the rear camera with your fingertip and keep still for about 20 seconds.</p>
+      <div class="hr-camera-panel hidden" id="hr-camera-panel">
+        <div class="hr-camera-preview">
+          <video id="hr-camera-video" playsinline muted></video>
+          <canvas id="hr-camera-canvas" width="64" height="48" hidden></canvas>
+          <div class="hr-live-readout">
+            <span id="hr-live-bpm">--</span>
+            <small>bpm</small>
+          </div>
+        </div>
+        <div class="hr-camera-status" id="hr-camera-status">Ready</div>
+        <div class="hr-measure-progress" aria-hidden="true">
+          <div id="hr-measure-fill"></div>
+        </div>
+        <button type="button" class="hr-camera-stop" onclick="app.stopCameraHeartRate(true)">Stop</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="hr-bpm">BPM result</label>
+      <input type="number" id="hr-bpm" class="form-input hr-bpm-input" placeholder="72" min="30" max="220" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="hr-context">Context</label>
+      <select id="hr-context" class="form-select">
+        <option value="resting">Resting</option>
+        <option value="walking">Walking</option>
+        <option value="workout">Workout</option>
+        <option value="recovery">Recovery</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="hr-note">Note (optional)</label>
+      <input type="text" id="hr-note" class="form-input" placeholder="e.g., after lunch walk">
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 16px">
+      <button class="btn btn-secondary" onclick="app.closeModal('heart-rate-modal')" style="flex: 0 0 auto">Cancel</button>
+      <button class="btn btn-primary btn-full" onclick="app.saveHeartRate()">Save Heart Rate</button>
     </div>
   </div>
 </div>
@@ -763,9 +1080,61 @@
         <input type="number" id="cf-fat" class="form-input" placeholder="0" step="0.1">
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label" for="cf-fiber">Fiber (g)</label>
+      <input type="number" id="cf-fiber" class="form-input" placeholder="0" step="0.1">
+    </div>
     <div style="display: flex; gap: 10px; margin-top: 16px">
       <button class="btn btn-secondary" onclick="app.closeModal('custom-food-modal')" style="flex: 0 0 auto">Cancel</button>
       <button class="btn btn-primary btn-full" onclick="app.saveCustomFood()">💾 Save Food</button>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Detail Modal -->
+<div id="activity-detail-modal" class="modal-overlay">
+  <div class="modal modal-large">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title" id="ad-title">Activity Details</h3>
+
+    <!-- Summary Hero -->
+    <div class="ad-hero" id="ad-hero">
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Splits Table -->
+    <div class="ad-section" id="ad-splits-section">
+      <h4 class="ad-section-title">Splits</h4>
+      <div class="ad-splits-table" id="ad-splits-table">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Effort Zones -->
+    <div class="ad-section" id="ad-zones-section">
+      <h4 class="ad-section-title">Effort Zones</h4>
+      <div class="ad-zones" id="ad-zones">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Speed Chart -->
+    <div class="ad-section" id="ad-speed-section">
+      <h4 class="ad-section-title">Speed Over Time</h4>
+      <div class="chart-container" style="height: 140px">
+        <canvas id="ad-speed-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="ad-section" id="ad-notes-section" style="display:none">
+      <h4 class="ad-section-title">Notes</h4>
+      <p class="ad-notes-text" id="ad-notes-text"></p>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 20px">
+      <button class="btn btn-secondary" onclick="app.closeModal('activity-detail-modal')" style="flex: 1">Close</button>
+      <button class="btn btn-danger" id="ad-delete-btn" onclick="app.deleteActivityFromDetail()" style="flex: 0 0 auto">🗑 Delete</button>
     </div>
   </div>
 </div>
@@ -862,7 +1231,7 @@
       const banner = document.getElementById('install-banner');
       if (banner) banner.classList.add('hidden');
       deferredPrompt = null;
-      console.log('NutriTrack installed successfully!');
+      console.log('Nouri installed successfully!');
     });
   })();
 </script>

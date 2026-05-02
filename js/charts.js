@@ -243,6 +243,135 @@ class NutriCharts {
   }
 
   // ══════════════════════════════════════════════════
+  // GENERIC MEASUREMENT LINE CHART
+  // ══════════════════════════════════════════════════
+  drawMeasurementChart(canvasId, entries, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const { ctx, w, h } = this._setup(canvas);
+
+    const pad = { top: 20, right: 16, bottom: 30, left: 45 };
+    const plotW = w - pad.left - pad.right;
+    const plotH = h - pad.top - pad.bottom;
+    const color = options.color || this.colors.warning;
+    const fillColor = options.fillColor || 'rgba(255, 152, 0, 0.16)';
+    const valueKey = options.valueKey || 'value';
+    const multiplier = options.multiplier || 1;
+    const unit = options.unit || '';
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!entries || entries.length === 0) {
+      ctx.fillStyle = this.colors.textMuted;
+      ctx.font = '13px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText(options.emptyLabel || 'No measurement data yet', w / 2, h / 2);
+      return;
+    }
+
+    const sorted = [...entries]
+      .filter(e => Number.isFinite(Number(e[valueKey])))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (sorted.length === 0) {
+      ctx.fillStyle = this.colors.textMuted;
+      ctx.font = '13px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText(options.emptyLabel || 'No measurement data yet', w / 2, h / 2);
+      return;
+    }
+
+    const values = sorted.map(e => Number(e[valueKey]) * multiplier);
+    const dates = sorted.map(e => new Date(e.date));
+    const minRaw = Math.min(...values);
+    const maxRaw = Math.max(...values);
+    const padding = Math.max(0.5, (maxRaw - minRaw) * 0.2);
+    const minVal = Math.floor((minRaw - padding) * 10) / 10;
+    const maxVal = Math.ceil((maxRaw + padding) * 10) / 10;
+    const range = maxVal - minVal || 1;
+
+    const toX = (i) => pad.left + (i / (sorted.length - 1 || 1)) * plotW;
+    const toY = (v) => pad.top + plotH - ((v - minVal) / range) * plotH;
+
+    const gridSteps = 5;
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = minVal + (range / gridSteps) * i;
+      const y = toY(val);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(w - pad.right, y);
+      ctx.strokeStyle = this.colors.bgLine;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = this.colors.textMuted;
+      ctx.font = '10px JetBrains Mono';
+      ctx.textAlign = 'right';
+      ctx.fillText(val.toFixed(1), pad.left - 8, y + 3);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(values[0]));
+    for (let i = 1; i < values.length; i++) {
+      const xc = (toX(i - 1) + toX(i)) / 2;
+      const yc = (toY(values[i - 1]) + toY(values[i])) / 2;
+      ctx.quadraticCurveTo(toX(i - 1), toY(values[i - 1]), xc, yc);
+    }
+    ctx.lineTo(toX(values.length - 1), toY(values[values.length - 1]));
+    ctx.lineTo(toX(values.length - 1), pad.top + plotH);
+    ctx.lineTo(toX(0), pad.top + plotH);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+    grad.addColorStop(0, fillColor);
+    grad.addColorStop(1, 'rgba(255, 183, 77, 0.0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(values[0]));
+    for (let i = 1; i < values.length; i++) {
+      const xc = (toX(i - 1) + toX(i)) / 2;
+      const yc = (toY(values[i - 1]) + toY(values[i])) / 2;
+      ctx.quadraticCurveTo(toX(i - 1), toY(values[i - 1]), xc, yc);
+    }
+    ctx.lineTo(toX(values.length - 1), toY(values[values.length - 1]));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    for (let i = 0; i < values.length; i++) {
+      const x = toX(i);
+      const y = toY(values[i]);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    const latest = values[values.length - 1];
+    ctx.fillStyle = this.colors.textSec;
+    ctx.font = '10px Inter';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${latest.toFixed(1)} ${unit}`, w - pad.right, pad.top - 6);
+
+    ctx.fillStyle = this.colors.textMuted;
+    ctx.font = '9px Inter';
+    ctx.textAlign = 'center';
+    const maxLabels = Math.min(sorted.length, 7);
+    const step = Math.max(1, Math.floor(sorted.length / maxLabels));
+    for (let i = 0; i < sorted.length; i += step) {
+      const d = dates[i];
+      ctx.fillText(`${d.getMonth() + 1}/${d.getDate()}`, toX(i), h - 8);
+    }
+    if (sorted.length > 1) {
+      const last = dates[dates.length - 1];
+      ctx.fillText(`${last.getMonth() + 1}/${last.getDate()}`, toX(sorted.length - 1), h - 8);
+    }
+  }
+
+  // ══════════════════════════════════════════════════
   // CALORIE BAR CHART (Progress page)
   // ══════════════════════════════════════════════════
   drawCalorieBarChart(canvasId, dailyData, target) {

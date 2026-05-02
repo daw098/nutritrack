@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════ */
 
 const DB_NAME = 'NutriTrackDB';
-const DB_VERSION = 1;
+const DB_VERSION = 3;
 
 class NutriDB {
   constructor() {
@@ -52,6 +52,20 @@ class NutriDB {
         if (!db.objectStoreNames.contains('water')) {
           const wt = db.createObjectStore('water', { keyPath: 'id' });
           wt.createIndex('date', 'date', { unique: false });
+        }
+
+        // Heart rate logs
+        if (!db.objectStoreNames.contains('heartRates')) {
+          const hr = db.createObjectStore('heartRates', { keyPath: 'id' });
+          hr.createIndex('date', 'date', { unique: false });
+          hr.createIndex('context', 'context', { unique: false });
+        }
+
+        // Body measurements such as belly / waist circumference
+        if (!db.objectStoreNames.contains('bodyMeasurements')) {
+          const bm = db.createObjectStore('bodyMeasurements', { keyPath: 'id' });
+          bm.createIndex('date', 'date', { unique: false });
+          bm.createIndex('type', 'type', { unique: false });
         }
       };
 
@@ -231,6 +245,19 @@ class NutriDB {
 
   // ── Water ─────────────────────────────────────────
   async addWater(amountMl, date = new Date()) {
+    if (typeof amountMl === 'object' && amountMl !== null) {
+      const entry = amountMl;
+      const { date: _d, ...rest } = entry;
+      const data = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        ...rest,
+        amountMl: Number(entry.amountMl) || 0,
+        date: this._normalizeDate(entry.date || date)
+      };
+      return this._add('water', data);
+    }
+
     const data = {
       id: crypto.randomUUID(),
       date: this._normalizeDate(date),
@@ -250,6 +277,77 @@ class NutriDB {
     return this._delete('water', id);
   }
 
+  // ── Heart Rate ────────────────────────────────────
+  async addHeartRate(entry) {
+    const normalizedDate = this._normalizeDate(entry.date || new Date());
+    const { date: _d, ...rest } = entry;
+    const data = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      ...rest,
+      bpm: Number(entry.bpm),
+      context: entry.context || 'resting',
+      note: entry.note || '',
+      source: entry.source || 'manual',
+      date: normalizedDate
+    };
+    return this._add('heartRates', data);
+  }
+
+  async getHeartRatesForDate(date) {
+    const normalized = this._normalizeDate(date);
+    const entries = await this._getByIndex('heartRates', 'date', normalized);
+    return entries.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+  }
+
+  async getLatestHeartRate() {
+    const all = await this.getAllHeartRates();
+    return all.length > 0 ? all[0] : null;
+  }
+
+  async deleteHeartRate(id) {
+    return this._delete('heartRates', id);
+  }
+
+  // ── Body Measurements ─────────────────────────────
+  async addBodyMeasurement(entry) {
+    const normalizedDate = this._normalizeDate(entry.date || new Date());
+    const { date: _d, ...rest } = entry;
+    const data = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      ...rest,
+      type: entry.type || 'belly',
+      valueCm: Number(entry.valueCm),
+      note: entry.note || '',
+      date: normalizedDate
+    };
+    return this._add('bodyMeasurements', data);
+  }
+
+  async getBodyMeasurements(type = 'belly') {
+    const entries = await this._getByIndex('bodyMeasurements', 'type', type);
+    return entries.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+  }
+
+  async getBodyMeasurementForDate(date, type = 'belly') {
+    const normalized = this._normalizeDate(date);
+    const entries = await this._getByIndex('bodyMeasurements', 'date', normalized);
+    const matches = entries
+      .filter(e => (e.type || 'belly') === type)
+      .sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+    return matches.length > 0 ? matches[0] : null;
+  }
+
+  async getLatestBodyMeasurement(type = 'belly') {
+    const all = await this.getBodyMeasurements(type);
+    return all.length > 0 ? all[0] : null;
+  }
+
+  async deleteBodyMeasurement(id) {
+    return this._delete('bodyMeasurements', id);
+  }
+
   // ── Aggregations ──────────────────────────────────
   async getDailySummary(date) {
     const normalized = this._normalizeDate(date);
@@ -257,23 +355,30 @@ class NutriDB {
     const activities = await this.getActivitiesForDate(date);
     const water = await this.getWaterForDate(date);
     const weight = await this.getWeightForDate(date);
+    const heartRates = await this.getHeartRatesForDate(date);
+    const bellyMeasurement = await this.getBodyMeasurementForDate(date, 'belly');
 
     const totalCalories = meals.reduce((s, m) => s + (m.calories || 0), 0);
     const totalProtein = meals.reduce((s, m) => s + (m.protein || 0), 0);
     const totalCarbs = meals.reduce((s, m) => s + (m.carbs || 0), 0);
     const totalFat = meals.reduce((s, m) => s + (m.fat || 0), 0);
+    const totalFiber = meals.reduce((s, m) => s + (m.fiber || 0), 0);
     const totalBurned = activities.reduce((s, a) => s + (a.caloriesBurned || 0), 0);
 
     return {
       date: normalized,
       meals,
       activities,
+      heartRates,
       waterMl: water,
       weight: weight ? weight.valueKg : null,
+      bellyMeasurement,
+      latestHeartRate: heartRates.length > 0 ? heartRates[0] : null,
       totalCalories,
       totalProtein,
       totalCarbs,
       totalFat,
+      totalFiber,
       totalBurned,
       netCalories: totalCalories - totalBurned
     };
@@ -294,7 +399,10 @@ class NutriDB {
     const store = this._tx('meals');
     return new Promise((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)));
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -303,7 +411,10 @@ class NutriDB {
     const store = this._tx('weights');
     return new Promise((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -312,7 +423,55 @@ class NutriDB {
     const store = this._tx('activities');
     return new Promise((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)));
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllWater() {
+    const store = this._tx('water');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)));
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllHeartRates() {
+    const store = this._tx('heartRates');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)));
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllBodyMeasurements() {
+    const store = this._tx('bodyMeasurements');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        resolve(rows.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)));
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async clearStore(storeName) {
+    const store = this._tx(storeName, 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.clear();
+      req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   }
